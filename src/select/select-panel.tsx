@@ -31,6 +31,7 @@ export default defineComponent({
       default: (): SelectOption[] => [],
     },
     scroll: TdSelectProps.scroll,
+    size: TdSelectProps.size,
   },
   setup(props, { expose }) {
     const COMPONENT_NAME = usePrefixClass('select');
@@ -148,7 +149,7 @@ export default defineComponent({
         onClick={(e) => e.stopPropagation()}
         style={extraStyle}
       >
-        {renderTNodeJSX('panelTopContent')}
+        {}
         {/* create option */}
         {showCreateOption.value && renderCreateOption()}
         {/* loading状态 */}
@@ -164,7 +165,6 @@ export default defineComponent({
             defaultNode: <div class={`${COMPONENT_NAME.value}__empty`}>{t(globalConfig.value.empty)}</div>,
           })}
         {!isEmpty.value && !props.loading && renderOptionsContent(options)}
-        {renderTNodeJSX('panelBottomContent')}
       </div>
     );
     return {
@@ -174,16 +174,25 @@ export default defineComponent({
       isVirtual,
       displayOptions,
       visibleData,
+      renderTNodeJSX,
     };
   },
   render() {
     return this.isVirtual ? (
-      <div>
-        <div style={this.cursorStyle}></div>
-        {this.renderPanel(this.visibleData, this.panelStyle)}
-      </div>
+      <>
+        {this.renderTNodeJSX('panelTopContent')}
+        <div>
+          <div style={this.cursorStyle}></div>
+          {this.renderPanel(this.visibleData, this.panelStyle)}
+        </div>
+        {this.renderTNodeJSX('panelBottomContent')}
+      </>
     ) : (
-      this.renderPanel(this.displayOptions)
+      <>
+        {this.renderTNodeJSX('panelTopContent')}
+        {this.renderPanel(this.displayOptions)}
+        {this.renderTNodeJSX('panelBottomContent')}
+      </>
     );
   },
 });
