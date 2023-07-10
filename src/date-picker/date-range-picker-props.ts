@@ -10,7 +10,7 @@ import { PropType } from 'vue';
 export default {
   /** 是否允许输入日期 */
   allowInput: Boolean,
-  /** 是否显示清楚按钮 */
+  /** 是否显示清除按钮 */
   clearable: Boolean,
   /** 时间选择器默认值，当 value/defaultValue 未设置值时有效 */
   defaultTime: {
@@ -152,6 +152,8 @@ export default {
   onBlur: Function as PropType<TdDateRangePickerProps['onBlur']>,
   /** 选中值发生变化时触发 */
   onChange: Function as PropType<TdDateRangePickerProps['onChange']>,
+  /** 如果存在“确定”按钮，则点击“确定”按钮时触发 */
+  onConfirm: Function as PropType<TdDateRangePickerProps['onConfirm']>,
   /** 输入框获得焦点时触发 */
   onFocus: Function as PropType<TdDateRangePickerProps['onFocus']>,
   /** 输入框数据发生变化时触发，参数 input 表示输入内容，value 表示组件当前有效值 */

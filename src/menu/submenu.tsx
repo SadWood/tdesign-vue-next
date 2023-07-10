@@ -20,6 +20,7 @@ import useRipple from '../hooks/useRipple';
 import { usePrefixClass } from '../hooks/useConfig';
 import { Popup, PopupPlacement } from '../popup';
 import isFunction from 'lodash/isFunction';
+import { TdSubmenuProps } from './type';
 
 export default defineComponent({
   name: 'TSubmenu',
@@ -58,13 +59,19 @@ export default defineComponent({
         [`${classPrefix.value}-is-opened`]: isOpen.value,
       },
     ]);
-    const popupClass = computed(() => [
+    const overlayInnerClassName = computed(() => [
       `${classPrefix.value}-menu__popup`,
       `${classPrefix.value}-is-${isHead ? 'horizontal' : 'vertical'}`,
       {
         [`${classPrefix.value}-is-opened`]: popupVisible.value,
       },
-      'narrow-scrollbar',
+      (props.popupProps as TdSubmenuProps['popupProps'])?.overlayInnerClassName,
+    ]);
+    const overlayClassName = computed(() => [
+      `${classPrefix.value}-menu--${theme.value}`,
+      isHead && `${classPrefix.value}-is-head-menu`,
+      { [`${classPrefix.value}-menu-is-nested`]: isNested.value },
+      (props.popupProps as TdSubmenuProps['popupProps'])?.overlayClassName,
     ]);
     const submenuClass = computed(() => [
       `${classPrefix.value}-menu__item`,
@@ -100,6 +107,7 @@ export default defineComponent({
       setTimeout(() => {
         if (!popupVisible.value) {
           open(props.value);
+
           // popupVisible设置为TRUE之后打开popup，因此需要在nextTick中确保可以拿到ref值
           nextTick().then(() => {
             passSubPopupRefToParent(popupWrapperRef.value);
@@ -208,7 +216,8 @@ export default defineComponent({
       classes,
       subClass,
       arrowClass,
-      popupClass,
+      overlayInnerClassName,
+      overlayClassName,
       submenuClass,
       submenuRef,
       popupWrapperRef,
@@ -227,34 +236,31 @@ export default defineComponent({
       if (!this.isNested && this.isHead) {
         placement = 'bottom-left';
       }
-      const overlayInnerStyle = this.isNested && this.isHead ? { marginLeft: '0px' } : { [`margin-top': `]: '12px' };
 
       const popupWrapper = (
         <div
           ref="popupWrapperRef"
           class={[
-            // ...this.popupClass,
             `${this.classPrefix}-menu__spacer`,
             `${this.classPrefix}-menu__spacer--${!this.isNested && this.isHead ? 'top' : 'left'}`,
           ]}
           onMouseenter={this.handleEnterPopup}
           onMouseleave={this.handleMouseLeavePopup}
         >
-          <ul class={`${this.classPrefix}-menu__popup-wrapper narrow-scrollbar`}>
-            {renderContent(this, 'default', 'content')}
-          </ul>
+          <ul class={`${this.classPrefix}-menu__popup-wrapper`}>{renderContent(this, 'default', 'content')}</ul>
         </div>
       );
       const slots = {
         content: () => popupWrapper,
       };
+
       const realPopup = (
         <Popup
-          overlayInnerClassName={[...this.popupClass]}
-          overlayClassName={`${this.classPrefix}-menu--${this.theme}`}
+          {...((this.popupProps ?? {}) as TdSubmenuProps['popupProps'])}
+          overlayInnerClassName={[...this.overlayInnerClassName]}
+          overlayClassName={[...this.overlayClassName]}
           visible={this.popupVisible}
           placement={placement as PopupPlacement}
-          overlayInnerStyle={overlayInnerStyle}
           v-slots={slots}
         >
           <div ref="submenuRef" class={this.submenuClass}>

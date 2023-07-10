@@ -34,6 +34,12 @@ export default defineComponent({
     const COMPONENT_NAME = usePrefixClass('select');
     const { globalConfig, t } = useConfig('select');
     const { popupVisible, inputValue, modelValue, value } = toRefs(props);
+    const [innerInputValue, setInputValue] = useDefaultValue(
+      inputValue,
+      props.defaultInputValue,
+      props.onInputChange,
+      'inputValue',
+    );
     const [orgValue, setOrgValue] = useVModel(value, modelValue, props.defaultValue, props.onChange);
     const selectPanelRef = ref(null);
     const selectInputRef = ref(null);
@@ -41,11 +47,15 @@ export default defineComponent({
       label: props.keys?.label || 'label',
       value: props.keys?.value || 'value',
     }));
-    const { options, optionsMap, optionsList, optionsCache } = useSelectOptions(props, keys);
+    const { options, optionsMap, optionsList, optionsCache, displayOptions } = useSelectOptions(
+      props,
+      keys,
+      innerInputValue,
+    );
 
     // 内部数据,格式化过的
     const innerValue = computed(() => {
-      if (orgValue.value === undefined || orgValue.value === '') {
+      if (orgValue.value === undefined) {
         return props.multiple ? [] : undefined;
       }
       if (props.valueType === 'object') {
@@ -55,12 +65,12 @@ export default defineComponent({
       }
       return orgValue.value;
     });
-    const setInnerValue: TdSelectProps['onChange'] = (newVal: SelectValue | SelectValue[], e) => {
+    const setInnerValue: TdSelectProps['onChange'] = (newVal: SelectValue | SelectValue[], context) => {
       if (props.valueType === 'object') {
         const { value, label } = keys.value;
         const getOption = (val: SelectValue) => {
-          if (val === undefined || val === '') {
-            return '';
+          if (val === undefined) {
+            return undefined;
           }
           const option = optionsMap.value.get(val);
           return {
@@ -71,15 +81,12 @@ export default defineComponent({
         newVal = props.multiple ? (newVal as SelectValue[]).map((val) => getOption(val)) : getOption(newVal);
       }
       if (newVal === orgValue.value) return;
-      setOrgValue(newVal, { selectedOptions: getSelectedOptions(newVal), trigger: e.trigger, e: e.e });
+      setOrgValue(newVal, {
+        selectedOptions: getSelectedOptions(newVal),
+        ...context,
+      });
     };
 
-    const [innerInputValue, setInputValue] = useDefaultValue(
-      inputValue,
-      props.defaultInputValue,
-      props.onInputChange,
-      'inputValue',
-    );
     const [innerPopupVisible, setInnerPopupVisible] = useDefaultValue(
       popupVisible,
       false,
@@ -154,7 +161,7 @@ export default defineComponent({
     // 键盘操作逻辑
     const hoverIndex = ref(-1);
     const handleKeyDown = (e: KeyboardEvent) => {
-      const optionsListLength = optionsList.value.length;
+      const optionsListLength = displayOptions.value.length;
       let newIndex = hoverIndex.value;
       switch (e.code) {
         case 'ArrowUp':
@@ -190,7 +197,9 @@ export default defineComponent({
             break;
           }
           if (!props.multiple) {
+            const selectedOptions = getSelectedOptions(optionsList.value[hoverIndex.value].value);
             setInnerValue(optionsList.value[hoverIndex.value].value, {
+              option: selectedOptions?.[0],
               selectedOptions: getSelectedOptions(optionsList.value[hoverIndex.value].value),
               trigger: 'check',
               e,
@@ -201,8 +210,10 @@ export default defineComponent({
             const optionValue = optionsList.value[hoverIndex.value]?.value;
             if (!optionValue) return;
             const newValue = getNewMultipleValue(innerValue.value, optionValue);
+            const selectedOptions = getSelectedOptions(newValue.value);
             setInnerValue(newValue.value, {
-              selectedOptions: getSelectedOptions(newValue.value),
+              option: selectedOptions.find((v) => v.value == optionValue),
+              selectedOptions,
               trigger: newValue.isCheck ? 'check' : 'uncheck',
               e,
             });
@@ -271,6 +282,7 @@ export default defineComponent({
       isCheckAll: isCheckAll.value,
       onCheckAllChange,
       getSelectedOptions,
+      displayOptions: displayOptions.value,
     }));
 
     provide(selectInjectKey, SelectProvide);
@@ -278,10 +290,10 @@ export default defineComponent({
     const checkValueInvalid = () => {
       // 参数类型检测与修复
       if (!props.multiple && isArray(orgValue.value)) {
-        setOrgValue(undefined);
+        setOrgValue(undefined, { selectedOptions: [], trigger: 'default' });
       }
       if (props.multiple && !isArray(orgValue.value)) {
-        setOrgValue([]);
+        setOrgValue([], { selectedOptions: [], trigger: 'default' });
       }
     };
     const handleSearch = debounce((value: string, { e }: { e: KeyboardEvent }) => {
@@ -436,8 +448,9 @@ export default defineComponent({
               handleSearch(`${value}`, { e: context.e as KeyboardEvent });
             }}
             onClear={({ e }) => {
-              setInnerValue(props.multiple ? [] : '', {
-                selectedOptions: getSelectedOptions(props.multiple ? [] : ''),
+              setInnerValue(props.multiple ? [] : undefined, {
+                option: null,
+                selectedOptions: getSelectedOptions(props.multiple ? [] : undefined),
                 trigger: 'clear',
                 e,
               });
