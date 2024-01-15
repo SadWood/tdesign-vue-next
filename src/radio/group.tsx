@@ -47,7 +47,7 @@ export default defineComponent({
 
     const checkedClassName = computed(() => `.${radioBtnName.value}.${STATUS.value.checked}`);
 
-    const barStyle = ref({ width: '0px', left: '0px' });
+    const barStyle = ref({ width: '0px', height: '0px', left: '0px', top: '0px', 'transition-property': 'none' });
 
     const calcDefaultBarStyle = () => {
       const div = document.createElement('div');
@@ -56,26 +56,46 @@ export default defineComponent({
       document.body.appendChild(div);
 
       const defaultCheckedRadio: HTMLElement = div.querySelector(checkedClassName.value);
-      const { offsetWidth, offsetLeft } = defaultCheckedRadio;
-      barStyle.value = { width: `${offsetWidth}px`, left: `${offsetLeft}px` };
+      const { offsetWidth, offsetHeight, offsetLeft, offsetTop } = defaultCheckedRadio;
+      barStyle.value = {
+        ...barStyle.value,
+        width: `${offsetWidth}px`,
+        height: `${offsetHeight}px`,
+        left: `${offsetLeft}px`,
+        top: `${offsetTop}px`,
+      };
       document.body.removeChild(div);
     };
 
-    const calcBarStyle = () => {
+    const calcBarStyle = (disableAnimation = false) => {
       if (props.variant === 'outline') return;
 
       const checkedRadio: HTMLElement = radioGroupRef.value.querySelector(checkedClassName.value);
+
+      const transitionProperty = disableAnimation ? 'none' : 'all';
       if (!checkedRadio) {
-        barStyle.value = { width: '0px', left: '0px' };
+        barStyle.value = {
+          'transition-property': transitionProperty,
+          width: '0px',
+          height: '9px',
+          left: '0px',
+          top: '0px',
+        };
         return;
       }
 
-      const { offsetWidth, offsetLeft } = checkedRadio;
+      const { offsetWidth, offsetHeight, offsetLeft, offsetTop } = checkedRadio;
       // current node is not rendered，fallback to default render
       if (!offsetWidth) {
         calcDefaultBarStyle();
       } else {
-        barStyle.value = { width: `${offsetWidth}px`, left: `${offsetLeft}px` };
+        barStyle.value = {
+          'transition-property': transitionProperty,
+          width: `${offsetWidth}px`,
+          height: `${offsetHeight}px`,
+          left: `${offsetLeft}px`,
+          top: `${offsetTop}px`,
+        };
       }
     };
 
@@ -87,7 +107,7 @@ export default defineComponent({
     });
 
     onMounted(() => {
-      calcBarStyle();
+      calcBarStyle(true);
       useResizeObserver(
         radioGroupRef,
         throttle(async () => {

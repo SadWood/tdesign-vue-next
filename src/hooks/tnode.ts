@@ -2,21 +2,23 @@ import { h, getCurrentInstance, ComponentInternalInstance, VNode } from 'vue';
 import isFunction from 'lodash/isFunction';
 import camelCase from 'lodash/camelCase';
 import kebabCase from 'lodash/kebabCase';
-import { getDefaultNode, getParams, OptionsType, JSXRenderContext } from '../utils/render-tnode';
+import { getDefaultNode, getParams, OptionsType, JSXRenderContext, getSlotFirst } from '../utils/render-tnode';
 
 // 兼容处理插槽名称，同时支持驼峰命名和中划线命名，示例：value-display 和 valueDisplay
 function handleSlots(instance: ComponentInternalInstance, name: string, params: Record<string, any>) {
-  // 每个 slots 需要单独的 h 函数 否则直接assign会重复把不同 slots 的 params 都注入
-  const finalParams = new Function('return ' + h.toString())();
-  if (params) {
-    Object.assign(finalParams, params);
-  }
-  // 检查是否存在 驼峰命名 的插槽
-  let node = instance.slots[camelCase(name)]?.(finalParams);
-  if (node) return node;
+  // 2023-08 new Function 触发部分使用场景安全策略问题（Chrome插件/eletron等）
+  // // 每个 slots 需要单独的 h 函数 否则直接assign会重复把不同 slots 的 params 都注入
+  // const finalParams = new Function('return ' + h.toString())();
+  // if (params) {
+  //   Object.assign(finalParams, params);
+  // }
+
+  // 检查是否存在 驼峰命名 的插槽（过滤注释节点）
+  let node = instance.slots[camelCase(name)]?.(params);
+  if (node && node.filter((t) => t.type.toString() !== 'Symbol(v-cmt)').length) return node;
   // 检查是否存在 中划线命名 的插槽
-  node = instance.slots[kebabCase(name)]?.(finalParams);
-  if (node) return node;
+  node = instance.slots[kebabCase(name)]?.(params);
+  if (node && node.filter((t) => t.type.toString() !== 'Symbol(v-cmt)').length) return node;
   return null;
 }
 
@@ -48,6 +50,7 @@ export const useTNodeJSX = () => {
     // assemble params && defaultNode
     const params = getParams(options);
     const defaultNode = getDefaultNode(options);
+    const slotFirst = getSlotFirst(options);
 
     // 处理 props 类型的Node
     let propsNode;
@@ -70,7 +73,7 @@ export const useTNodeJSX = () => {
     // 同名 props 和 slot 优先处理 props
     if (isFunction(propsNode)) return propsNode(h, params);
     const isPropsEmpty = [undefined, params, ''].includes(propsNode);
-    if (isPropsEmpty && (instance.slots[camelCase(name)] || instance.slots[kebabCase(name)])) {
+    if ((isPropsEmpty || slotFirst) && (instance.slots[camelCase(name)] || instance.slots[kebabCase(name)])) {
       return handleSlots(instance, name, params);
     }
     return propsNode;

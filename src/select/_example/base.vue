@@ -1,10 +1,18 @@
 <template>
   <t-space>
     <!-- 方式一：使用 options 输出下拉选项。优先级高于 t-option-->
-    <t-select v-model="value1" :options="options1" placeholder="请选择云解决方案"></t-select>
+    <t-select
+      v-model="value1"
+      :options="options1"
+      placeholder="请选择云解决方案"
+      clearable
+      @focus="onFocus"
+      @blur="onBlur"
+    ></t-select>
 
     <!-- 方式二：使用 t-option 输出下拉选项。options 和 t-option 两种实现方式二选一即可 -->
-    <t-select v-model="value2" placeholder="请选择云产品">
+    <!-- 宽度随内容自适应：auto-width -->
+    <t-select v-model="value2" label="产品：" placeholder="请选择云产品" auto-width clearable>
       <t-option v-for="item in options2" :key="item.value" :value="item.value" :label="item.label"></t-option>
     </t-select>
   </t-space>
@@ -36,4 +44,12 @@ const options2 = [
 
 const value1 = ref('');
 const value2 = ref('');
+
+const onFocus = (ctx) => {
+  console.log('focus:', ctx);
+};
+
+const onBlur = (ctx) => {
+  console.log('blur:', ctx);
+};
 </script>

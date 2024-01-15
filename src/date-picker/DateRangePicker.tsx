@@ -88,11 +88,11 @@ export default defineComponent({
         } else if (value.value.length === 2 && !props.enableTimePicker) {
           // 确保右侧面板月份比左侧大 避免两侧面板月份一致
           const nextMonth = value.value.map((v: string) => parseToDayjs(v, formatRef.value.format).month());
+          year.value = value.value.map((v: string) => parseToDayjs(v, formatRef.value.format).year());
           if (year.value[0] === year.value[1] && nextMonth[0] === nextMonth[1]) {
             nextMonth[0] === 11 ? (nextMonth[0] -= 1) : (nextMonth[1] += 1);
           }
           month.value = nextMonth;
-          year.value = value.value.map((v: string) => parseToDayjs(v, formatRef.value.format).year());
           // 月份季度选择时需要确保右侧面板年份比左侧大
           if ((props.mode === 'month' || props.mode === 'quarter') && year.value[0] === year.value[1]) {
             year.value = [year.value[0], year.value[0] + 1];
@@ -105,6 +105,7 @@ export default defineComponent({
           if (month.value.length === 1) month.value = [month.value[0], Math.min(month.value[0] + 1, 11)];
         }
       } else {
+        activeIndex.value = 0;
         isHoverCell.value = false;
         isFirstValueSelected.value = false;
         inputValue.value = formatDate(value.value, {
@@ -389,6 +390,7 @@ export default defineComponent({
       presetsPlacement: props.presetsPlacement,
       popupVisible: popupVisible.value,
       panelPreselection: props.panelPreselection,
+      cancelRangeSelectLimit: props.cancelRangeSelectLimit,
       onCellClick,
       onCellMouseEnter,
       onCellMouseLeave,

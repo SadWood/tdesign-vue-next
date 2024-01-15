@@ -4,7 +4,7 @@ import isBoolean from 'lodash/isBoolean';
 import isArray from 'lodash/isArray';
 import isFunction from 'lodash/isFunction';
 import { requestSubmit } from '../utils/dom';
-import { FormItemValidateResult } from './form-item';
+import { FormItemValidateResult, getFormItemClassName } from './form-item';
 import {
   Data,
   FormResetParams,
@@ -64,13 +64,14 @@ export default defineComponent({
       { [`${COMPONENT_NAME.value}-inline`]: props.layout === 'inline' },
     ]);
 
-    const FORM_ITEM_CLASS_PREFIX = usePrefixClass('form-item__');
+    const FORM_ITEM_CLASS_PREFIX = usePrefixClass('form-item');
 
     const getFirstError = (result: Result) => {
       if (isBoolean(result)) return '';
       const [firstKey] = Object.keys(result);
       if (props.scrollToFirstError) {
-        scrollTo(`${FORM_ITEM_CLASS_PREFIX.value + firstKey}`);
+        const tmpClassName = getFormItemClassName(FORM_ITEM_CLASS_PREFIX.value, firstKey);
+        scrollTo(tmpClassName);
       }
       const resArr = result[firstKey] as ValidateResultList;
       if (!isArray(resArr)) return '';

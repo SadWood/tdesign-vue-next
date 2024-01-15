@@ -9,10 +9,14 @@
       :data="data"
       :editable-cell-state="editableCellState"
       bordered
-      @row-validate="onRowValidate"
+      lazy-load
     />
+    <br />
+
     <!-- 示例代码有效，勿删 -->
-    <t-button @click="validateTableData">校验</t-button>
+    <t-space>
+      <t-button @click="validateTableData">校验</t-button>
+    </t-space>
   </div>
 </template>
 
@@ -46,10 +50,6 @@ const STATUS_OPTIONS = [
 
 const align = ref('left');
 const data = ref([...initData]);
-
-const onRowValidate = (params) => {
-  console.log('validate:', params);
-};
 
 // 用于控制哪些行或哪些单元格不允许出现编辑态，参数有 { row, col, rowIndex, colIndex }
 const editableCellState = (cellParams) => {
@@ -99,7 +99,9 @@ const columns = computed(() => [
       // 编辑完成，退出编辑态后触发
       onEdited: (context) => {
         console.log(context);
-        data.value.splice(context.rowIndex, 1, context.newRowData);
+        const newData = [...data.value];
+        newData.splice(context.rowIndex, 1, context.newRowData);
+        data.value = newData;
         console.log('Edit firstName:', context);
         MessagePlugin.success('Success');
       },
@@ -143,11 +145,13 @@ const columns = computed(() => [
     colKey: 'letters',
     cell: (h, { row }) => row.letters.join('、'),
     edit: {
+      // 始终保持为编辑态
+      keepEditMode: true,
       component: Select,
       // props, 透传全部属性到 Select 组件
       // props 为函数时，参数有：col, row, rowIndex, colIndex, editedRow。一般用于实现编辑组件之间的联动
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       props: ({ col, row, rowIndex, colIndex, editedRow }) => {
-        console.log(col, row, rowIndex, colIndex, editedRow);
         return {
           multiple: true,
           minCollapsedNum: 1,
@@ -166,6 +170,7 @@ const columns = computed(() => [
         console.log('Edit Letters:', context);
         MessagePlugin.success('Success');
       },
+      rules: [{ validator: (val) => val.length > 0, message: '至少选择一种' }],
     },
   },
   {

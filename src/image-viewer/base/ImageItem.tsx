@@ -1,7 +1,8 @@
-import { computed, defineComponent, ref, watch } from 'vue';
+import { computed, defineComponent, PropType, ref, toRefs, watch } from 'vue';
 import { ImageErrorIcon } from 'tdesign-icons-vue-next';
-import { usePrefixClass } from '../../hooks/useConfig';
+import { usePrefixClass, useConfig } from '../../hooks/useConfig';
 import { useDrag } from '../hooks';
+import { useImagePreviewUrl } from '../../hooks/useImagePreviewUrl';
 
 export default defineComponent({
   name: 'TImageItem',
@@ -9,14 +10,18 @@ export default defineComponent({
     rotate: Number,
     scale: Number,
     mirror: Number,
-    src: String,
-    placementSrc: String,
+    src: [String, Object] as PropType<string | File>,
+    placementSrc: [String, Object] as PropType<string | File>,
   },
+
   setup(props) {
+    const { src, placementSrc } = toRefs(props);
     const classPrefix = usePrefixClass();
     const error = ref(false);
     const loaded = ref(false);
     const { transform, mouseDownHandler } = useDrag({ translateX: 0, translateY: 0 });
+    const { globalConfig } = useConfig('imageViewer');
+    const errorText = globalConfig.value.errorText;
 
     const imgStyle = computed(() => ({
       transform: `rotate(${props.rotate}deg) scale(${props.scale})`,
@@ -38,12 +43,12 @@ export default defineComponent({
       loaded.value = false;
     };
 
-    watch(
-      () => props.src,
-      () => {
-        resetStatus();
-      },
-    );
+    const { previewUrl: mainImagePreviewUrl } = useImagePreviewUrl(src);
+    const { previewUrl: placementImagePreviewUrl } = useImagePreviewUrl(placementSrc);
+
+    watch([mainImagePreviewUrl, placementImagePreviewUrl], () => {
+      resetStatus();
+    });
 
     return () => (
       <div class={`${classPrefix.value}-image-viewer__modal-pic`}>
@@ -53,33 +58,33 @@ export default defineComponent({
               {/* 脱离文档流 */}
               <div class={`${classPrefix.value}-image-viewer__img-error-content`}>
                 <ImageErrorIcon size="4em" />
-                <div class={`${classPrefix.value}-image-viewer__img-error-text`}>图片加载失败，可尝试重新加载</div>
+                <div class={`${classPrefix.value}-image-viewer__img-error-text`}>{errorText}</div>
               </div>
             </div>
           )}
 
-          {!error.value && !!props.placementSrc && (
+          {!error.value && !!props.placementSrc && placementImagePreviewUrl.value && (
             <img
               class={`${classPrefix.value}-image-viewer__modal-image`}
               onMousedown={(event: MouseEvent) => {
                 event.stopPropagation();
                 mouseDownHandler(event);
               }}
-              src={props.placementSrc}
+              src={placementImagePreviewUrl.value}
               style={placementImgStyle.value}
               alt="image"
               draggable="false"
             />
           )}
 
-          {!error.value && (
+          {!error.value && mainImagePreviewUrl.value && (
             <img
               class={`${classPrefix.value}-image-viewer__modal-image`}
               onMousedown={(event: MouseEvent) => {
                 event.stopPropagation();
                 mouseDownHandler(event);
               }}
-              src={props.src}
+              src={mainImagePreviewUrl.value}
               onLoad={() => (loaded.value = true)}
               onError={() => (error.value = true)}
               style={imgStyle.value}

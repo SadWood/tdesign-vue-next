@@ -4,14 +4,15 @@ import get from 'lodash/get';
 import isFunction from 'lodash/isFunction';
 
 import { useChildComponentSlots } from '../../hooks/slot';
-import { TdSelectProps, TdOptionProps, SelectOptionGroup, SelectKeysType, SelectValue, SelectOption } from '../type';
+import { TdSelectProps, TdOptionProps, SelectOptionGroup, SelectValue, SelectOption } from '../type';
+import { KeysType } from '../../common';
 
 type UniOption = (TdOptionProps | SelectOptionGroup) & {
   index?: number;
   slots?: Slots;
 };
 
-export const useSelectOptions = (props: TdSelectProps, keys: Ref<SelectKeysType>, inputValue: Ref<string>) => {
+export const useSelectOptions = (props: TdSelectProps, keys: Ref<KeysType>, inputValue: Ref<string>) => {
   const getChildComponentSlots = useChildComponentSlots();
   const optionsCache = ref<SelectOption[]>([]);
 
@@ -22,12 +23,13 @@ export const useSelectOptions = (props: TdSelectProps, keys: Ref<SelectKeysType>
     const innerOptions: UniOption[] =
       props.options?.map((option) => {
         const getFormatOption = (option: TdOptionProps) => {
-          const { value, label } = keys.value;
+          const { value, label, disabled } = keys.value;
           const res = {
             ...option,
             index: dynamicIndex,
             label: get(option, label),
             value: get(option, value),
+            disabled: get(option, disabled),
           };
           dynamicIndex++;
           return res;
@@ -104,6 +106,8 @@ export const useSelectOptions = (props: TdSelectProps, keys: Ref<SelectKeysType>
   });
 
   const displayOptions = computed(() => {
+    if (props.onSearch && props.filterable) return options.value; // 远程搜索时，不执行内部的过滤，不干预用户的自行处理，如输入首字母搜索中文的场景等
+
     if (!inputValue.value || !(props.filterable || isFunction(props.filter))) return options.value;
 
     const filterMethods = (option: SelectOption) => {

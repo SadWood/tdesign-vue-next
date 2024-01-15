@@ -1,14 +1,14 @@
 <template>
   <!-- 注意组件父元素的宽度 -->
-  <div class="tdesign-demo-block-column-large tdesign-demo__table-affix" style="width: 100%">
-    <div>
+  <div style="width: 830px" class="tdesign-demo-block-column-large tdesign-demo__table-affix">
+    <t-space>
       <t-checkbox v-model="headerAffixedTop">表头吸顶</t-checkbox>
-      <t-checkbox v-model="footerAffixedBottom" style="margin-left: 32px">表尾吸底</t-checkbox>
-      <t-checkbox v-model="horizontalScrollAffixedBottom" style="margin-left: 32px">滚动条吸底</t-checkbox>
-      <t-checkbox v-model="paginationAffixedBottom" style="margin-left: 32px">分页器吸底</t-checkbox>
-      <t-checkbox v-model="fixedLeftColumn" style="margin-left: 32px">固定左侧列</t-checkbox>
-      <t-checkbox v-model="fixedRightColumn" style="margin-left: 32px">固定右侧列</t-checkbox>
-    </div>
+      <t-checkbox v-model="footerAffixedBottom">表尾吸底</t-checkbox>
+      <t-checkbox v-model="horizontalScrollAffixedBottom">滚动条吸底</t-checkbox>
+      <t-checkbox v-model="paginationAffixedBottom">分页器吸底</t-checkbox>
+      <t-checkbox v-model="fixedLeftColumn">固定左侧列</t-checkbox>
+      <t-checkbox v-model="fixedRightColumn">固定右侧列</t-checkbox>
+    </t-space>
 
     <t-table
       row-key="index"
@@ -16,19 +16,16 @@
       :columns="columns"
       :foot-data="footData"
       :row-class-name="rowClassName"
-      :pagination="{ defaultCurrent: 1, defaultPageSize: 5, total: TOTAL }"
-      :header-affixed-top="headerAffixedTop ? { offsetTop: 87, zIndex: 1000 } : undefined"
-      :footer-affixed-bottom="
-        footerAffixedBottom ? { offsetBottom: paginationAffixedBottom ? 60 : 0, zIndex: 1000 } : false
-      "
-      :horizontal-scroll-affixed-bottom="
-        horizontalScrollAffixedBottom ? { offsetBottom: paginationAffixedBottom ? 61 : 0, zIndex: 1000 } : false
-      "
+      :pagination="pagination"
+      :header-affixed-top="headerAffixedTopProps"
+      :footer-affixed-bottom="footerAffixedBottomProps"
+      :horizontal-scroll-affixed-bottom="horizontalScrollAffixedBottomProps"
       :pagination-affixed-bottom="paginationAffixedBottom"
       table-layout="fixed"
       drag-sort="col"
       bordered
       resizable
+      lazy-load
       @drag-sort="onDragSortChange"
     >
       <template #t-foot-required> 插槽渲染表尾 </template>
@@ -36,7 +33,7 @@
   </div>
 </template>
 <script setup lang="jsx">
-import { ref, watch, h } from 'vue';
+import { ref, watch, h, computed } from 'vue';
 import { ErrorCircleFilledIcon, CheckCircleFilledIcon, CloseCircleFilledIcon } from 'tdesign-icons-vue-next';
 
 const statusNameListMap = {
@@ -90,9 +87,9 @@ function getColumns(h, { fixedLeftColumn, fixedRightColumn }) {
       },
     },
     { colKey: 'channel', title: '签署方式', width: '120' },
-    { colKey: 'detail.email', title: '邮箱地址', ellipsis: true },
-    { colKey: 'matters', title: '申请事项', ellipsis: true },
-    { colKey: 'createTime', title: '申请时间' },
+    { colKey: 'detail.email', title: '邮箱地址', width: '180', ellipsis: true },
+    { colKey: 'matters', title: '申请事项', width: '180', ellipsis: true },
+    { colKey: 'createTime', title: '申请时间', width: '120' },
     {
       colKey: 'operation',
       title: '操作',
@@ -115,11 +112,11 @@ const columns = ref([]);
 
 // 重要：如果在预渲染场景下，初次渲染的表格宽度和最终呈现宽度不一样，请异步设置表头吸顶
 const headerAffixedTop = ref(true);
-const footerAffixedBottom = ref(true);
+const footerAffixedBottom = ref(false);
 const fixedLeftColumn = ref(true);
 const fixedRightColumn = ref(true);
-const horizontalScrollAffixedBottom = ref(false);
-const paginationAffixedBottom = ref(false);
+const horizontalScrollAffixedBottom = ref(true);
+const paginationAffixedBottom = ref(true);
 
 // type 可选值：foot 和 body
 function rowClassName({ type }) {
@@ -131,14 +128,40 @@ function onDragSortChange({ newData }) {
   columns.value = newData;
 }
 
-// 表尾吸顶和底部滚动条，二选一即可，也只能二选一
-watch(horizontalScrollAffixedBottom, (val) => {
-  val && (footerAffixedBottom.value = false);
+const pagination = ref({ defaultCurrent: 1, defaultPageSize: 5, total: TOTAL });
+
+// 注意保证对象引用不会发生变化，数据的变更始终保持为同一个对象。以免造成表格重新渲染问题
+const headerAffixedTopProps = computed(() => {
+  if (headerAffixedTop.value) {
+    return {
+      offsetTop: 87,
+      zIndex: 1000,
+      // container used to set scroll container, default container is body
+      // container: () => document.body,
+    };
+  }
+  return false;
 });
 
-// 表尾吸顶和底部滚动条，二选一即可，也只能二选一
-watch(footerAffixedBottom, (val) => {
-  val && (horizontalScrollAffixedBottom.value = false);
+const footerAffixedBottomProps = computed(() => {
+  if (footerAffixedBottom.value) {
+    return {
+      offsetBottom: paginationAffixedBottom.value ? 64 : 0,
+      zIndex: 1000,
+    };
+  }
+  return false;
+});
+
+const horizontalScrollAffixedBottomProps = computed(() => {
+  if (horizontalScrollAffixedBottom.value) {
+    return {
+      // height of pagination component is 64
+      offsetBottom: paginationAffixedBottom.value ? 64 : 0,
+      zIndex: 1000,
+    };
+  }
+  return false;
 });
 
 // 左侧固定列发生变化时
@@ -165,17 +188,3 @@ watch(
   { immediate: true },
 );
 </script>
-
-<style>
-/*
- * table-layout: auto 模式下，table 元素的宽度设置很重要很重要。
- * 如果不设置，列多了之后会挤在一起（如果使用了列宽调整调整功能，切勿设置 min-width 一类模糊宽度）
- * **/
-.tdesign-demo__table-affix table {
-  width: 1200px;
-}
-
-.tdesign-demo__table-affix .t-table {
-  max-width: 800px;
-}
-</style>

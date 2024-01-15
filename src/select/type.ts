@@ -5,14 +5,13 @@
  * */
 
 import { InputProps } from '../input';
-import { InputValue } from '../input';
 import { PopupProps } from '../popup';
 import { SelectInputProps } from '../select-input';
 import { TagInputProps } from '../tag-input';
 import { TagProps } from '../tag';
 import { SelectInputValueChangeContext } from '../select-input';
 import { PopupVisibleChangeContext } from '../popup';
-import { PlainObject, TNode, SizeEnum, InfinityScroll } from '../common';
+import { PlainObject, TNode, SizeEnum, KeysType, InfinityScroll } from '../common';
 
 export interface TdSelectProps<T extends SelectOption = SelectOption> {
   /**
@@ -67,15 +66,15 @@ export interface TdSelectProps<T extends SelectOption = SelectOption> {
   /**
    * 输入框的值
    */
-  inputValue?: InputValue;
+  inputValue?: string;
   /**
    * 输入框的值，非受控属性
    */
-  defaultInputValue?: InputValue;
+  defaultInputValue?: string;
   /**
-   * 用来定义 value / label 在 `options` 中对应的字段别名
+   * 用来定义 value / label / disabled 在 `options` 中对应的字段别名
    */
-  keys?: SelectKeysType;
+  keys?: KeysType;
   /**
    * 左侧文本
    */
@@ -240,7 +239,7 @@ export interface TdSelectProps<T extends SelectOption = SelectOption> {
   /**
    * 输入框值发生变化时触发，`context.trigger` 表示触发输入框值变化的来源：文本输入触发、清除按钮触发、失去焦点等
    */
-  onInputChange?: (value: InputValue, context?: SelectInputValueChangeContext) => void;
+  onInputChange?: (value: string, context?: SelectInputValueChangeContext) => void;
   /**
    * 下拉框显示或隐藏时触发
    */
@@ -300,11 +299,6 @@ export interface TdOptionGroupProps {
    * 分组别名
    * @default ''
    */
-  label?: string;
-}
-
-export interface SelectKeysType {
-  value?: string;
   label?: string;
 }
 

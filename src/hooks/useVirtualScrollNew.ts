@@ -29,7 +29,7 @@ const useVirtualScroll = (container: Ref<HTMLElement>, params: UseVirtualScrollP
   /** 注意测试：数据长度为空；数据长度小于表格高度等情况。即期望只有数据量达到一定程度才允许开启虚拟滚动 */
   const visibleData = ref<any[]>([]);
   // 用于显示表格列
-  const translateY = ref(0);
+  const translateY = ref((params.value.data?.length || 0) * (params.value.scroll?.rowHeight || 50));
   // 滚动高度，用于显示滚动条
   const scrollHeight = ref(0);
   const trScrollTopHeightList = ref<number[]>([]);
@@ -95,7 +95,7 @@ const useVirtualScroll = (container: Ref<HTMLElement>, params: UseVirtualScrollP
   const handleRowMounted = (rowData: any) => {
     if (!isVirtualScroll.value || !rowData || tScroll.value.isFixedRowHeight || !container.value) return;
     const trHeight = rowData.ref.value?.getBoundingClientRect().height;
-    const rowIndex = rowData.data.__VIRTUAL_SCROLL_INDEX;
+    const rowIndex = rowData.data.VIRTUAL_SCROLL_INDEX;
     const newTrHeightList = trHeightList.value;
     if (newTrHeightList[rowIndex] !== trHeight) {
       newTrHeightList[rowIndex] = trHeight;
@@ -127,7 +127,7 @@ const useVirtualScroll = (container: Ref<HTMLElement>, params: UseVirtualScrollP
   const addIndexToData = (data: any[]) => {
     data.forEach((item, index) => {
       // eslint-disable-next-line
-      item['__VIRTUAL_SCROLL_INDEX'] = index;
+      item['VIRTUAL_SCROLL_INDEX'] = index;
     });
   };
 
@@ -158,7 +158,7 @@ const useVirtualScroll = (container: Ref<HTMLElement>, params: UseVirtualScrollP
 
   // 固定高度场景，可直接通过数据长度计算出最大滚动高度
   watch(
-    () => [[...params.value.data, tScroll, isVirtualScroll, container]],
+    () => [[...params.value.data, tScroll.value, isVirtualScroll.value, container.value]],
     () => {
       if (!isVirtualScroll.value) return;
       const { data } = params.value;

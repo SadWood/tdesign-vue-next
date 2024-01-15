@@ -55,6 +55,11 @@ import { useGlobalIcon } from '../hooks/useGlobalIcon';
 
 export type FormItemValidateResult<T extends Data = Data> = { [key in keyof T]: boolean | AllValidateResult[] };
 
+export function getFormItemClassName(componentName: string, name?: string) {
+  if (!name) return '';
+  return `${componentName}__${name}`.replace(/(\[|\]\.)/g, '_');
+}
+
 export default defineComponent({
   name: 'TFormItem',
 
@@ -70,7 +75,8 @@ export default defineComponent({
     });
     const form = inject(FormInjectionKey, undefined);
 
-    const FORM_ITEM_CLASS_PREFIX = usePrefixClass('form-item__');
+    const classPrefix = usePrefixClass();
+    const formItemClassPrefix = usePrefixClass('form-item');
 
     const needRequiredMark = computed(() => {
       const requiredMark = props.requiredMark ?? form?.requiredMark ?? globalConfig.value.requiredMark;
@@ -144,7 +150,7 @@ export default defineComponent({
       if (resultIcon) return <span class={CLASS_NAMES.value.status}>{resultIcon}</span>;
       if (resultIcon === false) return;
 
-      resultIcon = form?.renderContent('statusIcon', { defaultNode: getDefaultIcon() });
+      resultIcon = form?.renderContent('statusIcon', { defaultNode: getDefaultIcon(), params: props });
       if (resultIcon) return resultIcon;
     };
     /** Suffix Icon END */
@@ -360,7 +366,7 @@ export default defineComponent({
 
     const classes = computed(() => [
       CLASS_NAMES.value.formItem,
-      FORM_ITEM_CLASS_PREFIX.value + (props.name || ''),
+      getFormItemClassName(formItemClassPrefix.value, props.name),
       {
         [CLASS_NAMES.value.formItemWithHelp]: helpNode.value,
         [CLASS_NAMES.value.formItemWithExtra]: extraNode.value,
@@ -372,7 +378,11 @@ export default defineComponent({
       return null;
     });
     const extraNode = computed<VNode>(() => {
-      const getExtraNode = (content: string) => <div class={CLASS_NAMES.value.extra}>{content}</div>;
+      const getExtraNode = (content: string) => (
+        <div class={CLASS_NAMES.value.extra} title={content}>
+          {content}
+        </div>
+      );
       const list = errorList.value;
       if (showErrorMessage.value && list?.[0]?.message) {
         return getExtraNode(list[0].message);
@@ -381,6 +391,17 @@ export default defineComponent({
         return getExtraNode(successList.value[0].message);
       }
       return null;
+    });
+
+    const tipsNode = computed<VNode>(() => {
+      const tmpTips = renderContent('tips');
+      if (!tmpTips) return null;
+      const tmpClasses = [
+        `${formItemClassPrefix.value}-tips`,
+        `${classPrefix.value}-tips`,
+        `${classPrefix.value}-is-${props.status || 'default'}`,
+      ];
+      return <div class={tmpClasses}>{tmpTips}</div>;
     });
 
     const handleBlur = async () => {
@@ -398,7 +419,9 @@ export default defineComponent({
             {renderContent('default')}
             {renderSuffixIcon()}
           </div>
-          {[helpNode.value, extraNode.value]}
+          {helpNode.value}
+          {tipsNode.value}
+          {extraNode.value}
         </div>
       </div>
     );

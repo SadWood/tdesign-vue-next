@@ -5,14 +5,13 @@
  * */
 
 import { InputProps } from '../input';
-import { InputValue } from '../input';
 import { PopupProps } from '../popup';
 import { SelectInputProps } from '../select-input';
 import { TagProps } from '../tag';
 import { TreeProps, TreeNodeModel } from '../tree';
 import { SelectInputValueChangeContext } from '../select-input';
 import { PopupVisibleChangeContext } from '../popup';
-import { TNode, TreeOptionData } from '../common';
+import { TNode, TreeOptionData, TreeKeysType } from '../common';
 
 export interface TdTreeSelectProps<DataOption extends TreeOptionData = TreeOptionData> {
   /**
@@ -65,11 +64,15 @@ export interface TdTreeSelectProps<DataOption extends TreeOptionData = TreeOptio
   /**
    * 输入框的值
    */
-  inputValue?: InputValue;
+  inputValue?: string;
   /**
    * 输入框的值，非受控属性
    */
-  defaultInputValue?: InputValue;
+  defaultInputValue?: string;
+  /**
+   * 用来定义 `value / label / children / disabled` 在 `data` 数据中对应的字段别名，示例：`{ value: 'key', label 'name', children: 'list' }`
+   */
+  keys?: TreeKeysType;
   /**
    * 是否正在加载数据
    * @default false
@@ -126,6 +129,14 @@ export interface TdTreeSelectProps<DataOption extends TreeOptionData = TreeOptio
    */
   size?: 'small' | 'medium' | 'large';
   /**
+   * 后置图标前的后置内容
+   */
+  suffix?: string | TNode;
+  /**
+   * 组件后置图标
+   */
+  suffixIcon?: TNode;
+  /**
    * 【开发中】透传 Tag 标签组件全部属性
    */
   tagProps?: TagProps;
@@ -176,7 +187,7 @@ export interface TdTreeSelectProps<DataOption extends TreeOptionData = TreeOptio
   /**
    * 输入框值发生变化时触发，`context.trigger` 表示触发输入框值变化的来源：文本输入触发、清除按钮触发、失去焦点等
    */
-  onInputChange?: (value: InputValue, context?: SelectInputValueChangeContext) => void;
+  onInputChange?: (value: string, context?: SelectInputValueChangeContext) => void;
   /**
    * 下拉框显示或隐藏时触发
    */

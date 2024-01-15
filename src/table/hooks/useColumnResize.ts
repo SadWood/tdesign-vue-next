@@ -106,7 +106,7 @@ export default function useColumnResize(params: {
   // 频繁事件，仅用于计算是否在表头显示拖拽鼠标形态
   const onColumnMouseover = (e: MouseEvent, col: BaseTableCol<TableRowData>) => {
     // calculate mouse cursor before drag start
-    if (!resizeLineRef.value || resizeLineParams.isDragging) return;
+    if (!resizeLineRef.value || resizeLineParams.isDragging || !e.target) return;
     const target = (e.target as HTMLElement).closest('th');
     // 判断是否为叶子阶段，仅叶子结点允许拖拽
     const colKey = target.getAttribute('data-colkey');
@@ -330,26 +330,11 @@ export default function useColumnResize(params: {
     document.ondragstart = () => false;
   };
 
-  /**
-   * 对外暴露函数：更新列数量减少时的表格宽度
-   * @params colKeys 减少的列
-   */
-  const updateTableWidthOnColumnChange = (colKeys: string[]) => {
-    const thWidthList = getThWidthList('calculate');
-    let reduceWidth = 0;
-    colKeys.forEach((key) => {
-      reduceWidth += thWidthList[key];
-    });
-    const oldTotalWidth = Object.values(thWidthList).reduce((r = 0, n) => r + n);
-    setTableElmWidth(oldTotalWidth - reduceWidth);
-  };
-
   return {
     resizeLineRef,
     resizeLineStyle,
     onColumnMouseover,
     onColumnMousedown,
     setEffectColMap,
-    updateTableWidthOnColumnChange,
   };
 }

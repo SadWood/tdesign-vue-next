@@ -1,12 +1,12 @@
-import { defineComponent, PropType } from 'vue';
+import { computed, defineComponent, PropType } from 'vue';
 import { ImageIcon, ZoomInIcon, ZoomOutIcon, DownloadIcon, MirrorIcon, RotationIcon } from 'tdesign-icons-vue-next';
-
 import TImageViewerIcon from './ImageModalIcon';
 import TToolTip from '../../tooltip';
-import { usePrefixClass } from '../../hooks/useConfig';
+import { usePrefixClass, useConfig } from '../../hooks/useConfig';
 import { downloadFile } from '../utils';
-
+import { useImagePreviewUrl } from '../../hooks';
 import { ImageInfo } from '../type';
+import { largeNumberToFixed } from '../../_common/js/input-number/large-number';
 
 export default defineComponent({
   name: 'TImageViewerUtils',
@@ -26,13 +26,17 @@ export default defineComponent({
   },
   setup(props) {
     const classPrefix = usePrefixClass();
+    const imageUrl = computed(() => props.currentImage.mainImage);
+
+    const { previewUrl } = useImagePreviewUrl(imageUrl);
+    const { globalConfig } = useConfig('imageViewer');
 
     return () => (
       <div class={`${classPrefix.value}-image-viewer__utils`}>
         <div class={`${classPrefix.value}-image-viewer__utils-content`}>
           <TToolTip
             overlayClassName={`${classPrefix.value}-image-viewer__utils--tip`}
-            content="镜像"
+            content={globalConfig.value.mirrorTipText}
             destroyOnClose
             placement="top"
             showArrow
@@ -42,7 +46,7 @@ export default defineComponent({
           </TToolTip>
           <TToolTip
             overlayClassName={`${classPrefix.value}-image-viewer__utils--tip`}
-            content="旋转"
+            content={globalConfig.value.rotateTipText}
             destroyOnClose
             placement="top"
             showArrow
@@ -54,12 +58,13 @@ export default defineComponent({
           <TImageViewerIcon
             class={`${classPrefix.value}-image-viewer__utils-scale`}
             size="medium"
-            label={`${props.scale * 100}%`}
+            label={`${largeNumberToFixed(String(props.scale * 100))}%`}
           />
+
           <TImageViewerIcon icon={() => <ZoomInIcon size="medium" />} onClick={props.onZoomIn} />
           <TToolTip
             overlayClassName={`${classPrefix.value}-image-viewer__utils--tip`}
-            content="原始大小"
+            content={globalConfig.value.originalSizeTipText}
             destroyOnClose
             placement="top"
             showArrow
@@ -73,7 +78,7 @@ export default defineComponent({
             <TImageViewerIcon
               icon={() => <DownloadIcon size="medium" />}
               onClick={() => {
-                downloadFile(props.currentImage.mainImage);
+                downloadFile(previewUrl.value);
               }}
             />
           )}

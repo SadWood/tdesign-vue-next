@@ -5,10 +5,16 @@ import useVModel from '../hooks/useVModel';
 import { useFormDisabled } from '../form/hooks';
 import useLengthLimit from './useLengthLimit';
 
+export function getOutputValue(val: InputValue, type: TdInputProps['type']) {
+  if (type === 'number') {
+    return val || val === 0 ? Number(val) : undefined;
+  }
+  return val;
+}
+
 export interface ExtendsTdInputProps extends TdInputProps {
   showInput: boolean;
   keepWrapperWidth: boolean;
-  allowTriggerBlur: boolean;
 }
 
 export default function useInput(props: ExtendsTdInputProps, expose: (exposed: Record<string, any>) => void) {
@@ -29,7 +35,7 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
   const limitParams = computed(() => ({
     value: [undefined, null].includes(innerValue.value) ? undefined : String(innerValue.value),
     status: props.status,
-    maxlength: props.maxlength,
+    maxlength: Number(props.maxlength),
     maxcharacter: props.maxcharacter,
     allowInputOverMax: props.allowInputOverMax,
     onValidate: props.onValidate,
@@ -43,18 +49,27 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
     );
   });
 
-  const focus = () => inputRef.value?.focus();
-  const blur = () => inputRef.value?.blur();
+  const focus = () => {
+    focused.value = true;
+    inputRef.value?.focus();
+  };
+
+  const blur = () => {
+    focused.value = false;
+    inputRef.value?.blur();
+  };
 
   const emitFocus = (e: FocusEvent) => {
+    if (isHover.value && focused.value) return;
     inputValue.value = innerValue.value;
-    if (props.disabled || props.readonly) return;
+    if (props.disabled) return;
     focused.value = true;
     props.onFocus?.(innerValue.value, { e });
   };
 
   const emitClear = ({ e }: { e: MouseEvent }) => {
-    setInnerValue('', { e, trigger: 'clear' });
+    const val = props.type === 'number' ? undefined : '';
+    setInnerValue(val, { e, trigger: 'clear' });
     props.onClear?.({ e });
   };
 
@@ -82,10 +97,10 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
     const { target } = e;
     let val = (target as HTMLInputElement).value;
     // over length: allow delete; not add
-    if (props.type !== 'number' && val.length > innerValue.value?.length) {
+    if (props.type !== 'number' && typeof innerValue.value === 'string' && val.length > innerValue.value?.length) {
       val = getValueByLimitNumber(val);
     }
-    setInnerValue(val, { e } as { e: InputEvent; trigger: 'input' });
+    setInnerValue(getOutputValue(val, props.type), { e, trigger: 'input' });
     // 受控
     nextTick(() => {
       setInputElValue(innerValue.value);
@@ -118,14 +133,19 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
 
   const formItem = inject(FormItemInjectionKey, undefined);
   const formatAndEmitBlur = (e: FocusEvent) => {
-    if (props.format) {
-      inputValue.value = props.format(innerValue.value);
-    }
-    focused.value = false;
-    // 点击清空按钮的时候，不应该触发 onBlur 事件。这个规则在表格单元格编辑中有很重要的应用
-    if (!isClearIcon() && props.allowTriggerBlur) {
+    if (isHover.value) return;
+    if (!isClearIcon()) {
+      if (props.format) {
+        inputValue.value =
+          typeof innerValue.value === 'number' || props.type === 'number'
+            ? innerValue.value
+            : props.format(innerValue.value);
+      }
+      focused.value = false;
       props.onBlur?.(innerValue.value, { e });
       formItem?.handleBlur();
+    } else {
+      focus();
     }
   };
 
@@ -133,15 +153,16 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
     isComposition.value = false;
     compositionValue.value = '';
     inputValueChangeHandle(e);
-    props.onCompositionend?.(innerValue.value, { e });
+    props.onCompositionend?.(String(innerValue.value), { e });
   };
+
   const onHandleCompositionstart = (e: CompositionEvent) => {
     isComposition.value = true;
     const {
       currentTarget: { value },
     }: any = e;
     compositionValue.value = value;
-    props.onCompositionstart?.(innerValue.value, { e });
+    props.onCompositionstart?.(String(innerValue.value), { e });
   };
 
   const onRootClick = (e: MouseEvent) => {
@@ -164,15 +185,16 @@ export default function useInput(props: ExtendsTdInputProps, expose: (exposed: R
   watch(
     innerValue,
     (val, oldVal) => {
+      const isNumberType = props.type === 'number';
       // 初始化时，如果有 format 函数，需要对 value 进行格式化
-      if (oldVal === undefined && props.format) {
+      if (oldVal === undefined && props.format && typeof val !== 'number' && !isNumberType) {
         inputValue.value = props.format(val);
       } else {
         inputValue.value = val;
       }
       // limit props value
-      const newVal = getValueByLimitNumber(val);
-      if (newVal !== val && props.type !== 'number') {
+      const newVal = typeof val === 'number' ? val : getValueByLimitNumber(val);
+      if (newVal !== val && !isNumberType) {
         setInnerValue(newVal, { trigger: 'initial' });
       }
     },

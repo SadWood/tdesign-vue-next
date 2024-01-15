@@ -4,7 +4,7 @@ import FakeArrow from '../common-components/fake-arrow';
 import { CollapseValue, TdCollapsePanelProps } from './type';
 import { useTNodeJSX, useContent } from '../hooks/tnode';
 import { usePrefixClass } from '../hooks/useConfig';
-import useCollapseAnimation from './useCollapseAnimation';
+import useCollapseAnimation from '../hooks/useCollapseAnimation';
 
 export default defineComponent({
   name: 'TCollapsePanel',
@@ -50,6 +50,9 @@ export default defineComponent({
       }
       e.stopPropagation();
     };
+    const handleHeaderRightContentClick = (e: MouseEvent) => {
+      e.stopPropagation();
+    };
     const renderDefaultIcon = () => {
       return <FakeArrow overlayClassName={`${componentName.value}__icon--default`} />;
     };
@@ -70,6 +73,11 @@ export default defineComponent({
     const renderBlank = () => {
       return <div class={`${componentName.value}__header--blank`}></div>;
     };
+    const renderHeaderRightContent = () => {
+      const headerRightContent = renderTNodeJSX('headerRightContent');
+
+      return headerRightContent ? <div onClick={handleHeaderRightContentClick}>{headerRightContent}</div> : null;
+    };
     const renderHeader = () => {
       const cls = [
         `${componentName.value}__header`,
@@ -77,12 +85,13 @@ export default defineComponent({
           [clickableClass.value]: expandOnRowClick.value && !isDisabled.value,
         },
       ];
+
       return (
         <div class={cls} onClick={handleClick}>
           {expandIconPlacement.value === 'left' && renderIcon()}
           {renderTNodeJSX('header')}
           {renderBlank()}
-          {renderTNodeJSX('headerRightContent')}
+          {renderHeaderRightContent()}
           {expandIconPlacement.value === 'right' && renderIcon()}
         </div>
       );

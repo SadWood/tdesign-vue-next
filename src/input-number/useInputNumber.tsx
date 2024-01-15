@@ -15,7 +15,7 @@ import {
   largeNumberToFixed,
 } from '../_common/js/input-number/number';
 import { useFormDisabled } from '../form/hooks';
-import { TdInputProps } from '../input';
+import { StrInputProps } from '../input';
 
 /**
  * 独立一个组件 Hook 方便用户直接使用相关逻辑 自定义任何样式的数字输入框
@@ -87,7 +87,11 @@ export default function useInputNumber(props: TdInputNumberProps) {
           userInput.value = getUserInput(inputValue);
         }
         const fixedNumber = Number(largeNumberToFixed(inputValue, decimalPlaces, largeNumber));
-        if (decimalPlaces !== undefined && ![undefined, null].includes(val) && Number(fixedNumber) !== Number(tValue)) {
+        if (
+          decimalPlaces !== undefined &&
+          ![undefined, null].includes(val) &&
+          Number(fixedNumber) !== Number(tValue.value)
+        ) {
           setTValue(fixedNumber, { type: 'props', e: undefined });
         }
       }
@@ -155,9 +159,10 @@ export default function useInputNumber(props: TdInputNumberProps) {
     setTValue(r.newValue, { type: 'add', e });
   };
 
-  const onInnerInputChange: TdInputProps['onChange'] = (inputValue, { e }) => {
+  const onInnerInputChange: StrInputProps['onChange'] = (inputValue, { e }) => {
     // 千分位处理
     const val = formatThousandths(inputValue);
+
     if (!canInputNumber(val, props.largeNumber)) return;
 
     userInput.value = val;
@@ -179,10 +184,12 @@ export default function useInputNumber(props: TdInputNumberProps) {
       const r = getMaxOrMinValidateResult({ value: tValue.value, largeNumber, max, min });
       if (r === 'below-minimum') {
         setTValue(min, { type: 'blur', e: ctx.e });
+        props.onBlur?.(min, ctx);
         return;
       }
       if (r === 'exceed-maximum') {
         setTValue(max, { type: 'blur', e: ctx.e });
+        props.onBlur?.(max, ctx);
         return;
       }
     }
@@ -191,6 +198,7 @@ export default function useInputNumber(props: TdInputNumberProps) {
       largeNumber,
     });
     userInput.value = getUserInput(newValue);
+
     if (newValue !== tValue.value) {
       setTValue(newValue, { type: 'blur', e: ctx.e });
     }

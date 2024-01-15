@@ -12,7 +12,7 @@ export default defineComponent({
   props: { ...props },
   emits: ['click'],
   setup(props, ctx) {
-    const { href, target = '_self' } = toRefs(props);
+    const { href, target } = toRefs(props);
     const classPrefix = usePrefixClass();
     const menu = inject<TdMenuInterface>('TdMenu');
     const itemRef = ref<HTMLElement>();
@@ -29,10 +29,9 @@ export default defineComponent({
         [`${classPrefix.value}-submenu__item`]: !!submenu && !menu.isHead,
       },
     ]);
-
     // lifetimes
     onMounted(() => {
-      menu?.vMenu?.add({ value: props.value, parent: submenu?.value, vnode: ctx.slots.default });
+      menu?.vMenu?.add({ value: props.value, parent: submenu?.value, vnode: ctx.slots.default, ...props });
     });
 
     return {
@@ -44,6 +43,7 @@ export default defineComponent({
       itemRef,
       href,
       target,
+      submenu,
     };
   },
   methods: {
@@ -51,11 +51,11 @@ export default defineComponent({
       e.stopPropagation();
       if (this.disabled) return;
       this.menu.select(this.value);
-      emitEvent(this, 'click');
-      if (this.to) {
+      emitEvent(this, 'click', { e, value: this.value });
+      if (this.to || (this.routerLink && this.href)) {
         const router = this.router || this.$router;
         const methods: string = this.replace ? 'replace' : 'push';
-        router[methods](this.to).catch((err: Error) => {
+        router[methods](this.to || this.href).catch((err: Error) => {
           // vue-router 3.1.0+ push/replace cause NavigationDuplicated error
           // https://github.com/vuejs/vue-router/issues/2872
           // 当前path和目标path相同时，会抛出NavigationDuplicated的错误
@@ -67,18 +67,35 @@ export default defineComponent({
           }
         });
       }
+      this.submenu?.closeParentPopup?.(e);
     },
   },
   render() {
+    const router = this.router || this.$router;
+
     const liContent = (
       <li ref="itemRef" class={this.classes} onClick={this.handleClick}>
         {renderTNodeJSX(this, 'icon')}
-        {this.href ? (
-          <a href={this.href} target={this.target} class={`${this.classPrefix}-menu__item-link`}>
+        {this.routerLink ? (
+          <a
+            href={this.href ? this.href : this.to ? router?.resolve(this.to).href : ''}
+            target={this.target}
+            class={`${this.classPrefix}-menu__item-link`}
+            onClick={(e) => e.preventDefault()}
+          >
+            <span class={`${this.classPrefix}-menu__content`}>{renderContent(this, 'default', 'content')}</span>
+          </a>
+        ) : this.href ? (
+          <a
+            href={this.href}
+            target={this.target}
+            class={`${this.classPrefix}-menu__item-link`}
+            onClick={(e) => this.disabled && e.preventDefault()}
+          >
             <span class={`${this.classPrefix}-menu__content`}>{renderContent(this, 'default', 'content')}</span>
           </a>
         ) : (
-          <span class={[`${this.classPrefix}-menu__content`]}>{renderContent(this, 'default', 'content')}</span>
+          <span class={`${this.classPrefix}-menu__content`}>{renderContent(this, 'default', 'content')}</span>
         )}
       </li>
     );

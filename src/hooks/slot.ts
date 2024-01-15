@@ -1,4 +1,15 @@
-import { Slots, VNode, Component, getCurrentInstance, Fragment, Comment } from 'vue';
+import {
+  Slots,
+  VNode,
+  Component,
+  getCurrentInstance,
+  Fragment,
+  Comment,
+  RendererNode,
+  VNodeArrayChildren,
+  RendererElement,
+  VNodeChild,
+} from 'vue';
 import isArray from 'lodash/isArray';
 
 /**
@@ -46,7 +57,17 @@ export function useChildComponentSlots() {
  * @example const getChildSlots = useChildSlots()
  * @example getChildSlots()
  */
-export function useChildSlots() {
+export function useChildSlots(): () => (
+  | VNode<
+      RendererNode,
+      RendererElement,
+      {
+        [key: string]: any;
+      }
+    >
+  | VNodeArrayChildren
+  | VNodeChild
+)[] {
   const instance = getCurrentInstance();
   return () => {
     const { slots } = instance;
@@ -54,6 +75,9 @@ export function useChildSlots() {
 
     return content
       .filter((item) => {
+        if (typeof item.type === 'symbol' && !item.children) {
+          return false;
+        }
         return item.type !== Comment;
       })
       .map((item) => {

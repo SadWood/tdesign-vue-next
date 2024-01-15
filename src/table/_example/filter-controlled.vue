@@ -41,6 +41,7 @@
       :data="data"
       :filter-value="filterValue"
       :bordered="bordered"
+      lazy-load
       @filter-change="onFilterChange"
     />
   </div>
@@ -80,17 +81,21 @@ const onEmailChange = (val, ctx) => {
 const columns = computed(() => [
   { colKey: 'applicant', title: '申请人', width: 100, foot: '-' },
   {
-    title: '申请状态',
+    title: () => '申请状态',
     colKey: 'status',
     align: align.value,
     // 单选过滤配置
     filter: {
+      // 过滤行中的列标题别名
+      // label: '申请状态 A',
       type: 'single',
       list: [
         { label: '审批通过', value: 0 },
         { label: '已过期', value: 1 },
         { label: '审批失败', value: 2 },
       ],
+      // confirm to search and hide filter popup
+      confirmEvents: ['onChange'],
       // 支持透传全部 Popup 组件属性
       // popupProps: {
       //   attach: () => document.body,
@@ -153,6 +158,9 @@ const columns = computed(() => [
       props: {
         firstDayOfWeek: 7,
       },
+      style: { fontSize: '14px' },
+      classNames: 'custom-class-name',
+      attrs: { 'data-type': 'date-range-picker' },
       // 是否显示重置取消按钮，一般情况不需要显示
       showConfirmAndReset: true,
       // 日期范围是一个组件，重置时需赋值为 []
@@ -161,7 +169,7 @@ const columns = computed(() => [
   },
 ]);
 
-const filterValue = ref({ channel: [], createTime: [] });
+const filterValue = ref({ channel: [] });
 const data = ref([...initData]);
 const bordered = ref(true);
 
@@ -188,7 +196,8 @@ const request = (filters) => {
   }, 100);
 };
 
-const onFilterChange = (filters) => {
+const onFilterChange = (filters, ctx) => {
+  console.log('filter-change', filters, ctx);
   filterValue.value = {
     ...filters,
     createTime: filters.createTime || [],

@@ -16,7 +16,7 @@ import { getCellKey, SkipSpansValue } from './hooks/useRowspanAndColspan';
 import { TooltipProps } from '../tooltip';
 import { PaginationProps } from '..';
 import { VirtualScrollConfig } from '../hooks/useVirtualScrollNew';
-import { AttachNode } from '../common';
+import { AttachNode, SlotReturnValue } from '../common';
 
 export interface RenderTdExtra {
   rowAndColFixedPosition: RowAndColFixedPosition;
@@ -71,6 +71,8 @@ export interface TrProps extends TrCommonProps {
   cellEmptyContent: TdBaseTableProps['cellEmptyContent'];
   virtualConfig: VirtualScrollConfig;
   attach?: AttachNode;
+  active?: boolean;
+  isHover?: boolean;
 }
 
 export const ROW_LISTENERS = ['click', 'dblclick', 'mouseover', 'mousedown', 'mouseenter', 'mouseleave', 'mouseup'];
@@ -132,6 +134,8 @@ export default defineComponent({
     // 合并单元格，是否跳过渲染
     skipSpansMap: Map as PropType<TrProps['skipSpansMap']>,
     virtualConfig: Object as PropType<TrProps['virtualConfig']>,
+    active: Boolean,
+    isHover: Boolean,
     ...pick(baseTableProps, TABLE_PROPS),
     // eslint-disable-next-line
     tableElm: {},
@@ -142,7 +146,7 @@ export default defineComponent({
   emits: ['row-mounted'],
 
   setup(props: TrProps, context: SetupContext) {
-    const { tableContentElm } = toRefs(props);
+    const { tableContentElm, active, isHover } = toRefs(props);
     const trRef = ref(null);
     const {
       tdEllipsisClass,
@@ -173,7 +177,14 @@ export default defineComponent({
         { row: props.row, rowIndex: props.rowIndex, type: 'body' },
         props.rowKey || 'id',
       );
-      return [trStyles.value?.classes, customClasses].filter((v) => v);
+      return [
+        trStyles.value?.classes,
+        customClasses,
+        {
+          [`${props.classPrefix}-table__row--active`]: active.value,
+          [`${props.classPrefix}-table__row--hover`]: isHover.value,
+        },
+      ].filter((v) => v);
     });
 
     const { hasLazyLoadHolder, tRowHeight } = useLazyLoad(
@@ -206,10 +217,20 @@ export default defineComponent({
     function renderEllipsisCell(cellParams: BaseTableCellParams<TableRowData>, params: RenderEllipsisCellParams) {
       const { cellNode } = params;
       const { col, colIndex } = cellParams;
-      let content = isFunction(col.ellipsis) ? col.ellipsis(h, cellParams) : undefined;
-      if (typeof col.ellipsis === 'object' && isFunction(col.ellipsis.content)) {
+
+      let content: SlotReturnValue;
+      if (isFunction(col.ellipsis)) {
+        content = col.ellipsis(h, cellParams);
+      } else if (typeof col.ellipsis === 'object' && isFunction(col.ellipsis.content)) {
         content = col.ellipsis.content(h, cellParams);
+      } else if (context.slots[`ellipsis-${col.colKey}`]) {
+        // support ellipsis-<colKey> to define one column cell ellipsis-content
+        content = context.slots[`ellipsis-${col.colKey}`](cellParams);
+      } else if (context.slots.ellipsis) {
+        // support ellipsis slot to define all table cell ellipsis-content
+        content = context.slots.ellipsis(cellParams);
       }
+
       let tooltipProps = {};
       if (typeof col.ellipsis === 'object') {
         tooltipProps = 'props' in col.ellipsis ? col.ellipsis.props : col.ellipsis || undefined;

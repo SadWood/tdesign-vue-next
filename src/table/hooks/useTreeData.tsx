@@ -3,7 +3,6 @@ import {
   AddRectangleIcon as TdAddRectangleIcon,
   MinusRectangleIcon as TdMinusRectangleIcon,
 } from 'tdesign-icons-vue-next';
-import cloneDeep from 'lodash/cloneDeep';
 import get from 'lodash/get';
 import TableTreeStore, { SwapParams } from '../../_common/js/table/tree-store';
 import {
@@ -19,10 +18,11 @@ import { renderCell } from '../tr';
 import { useConfig } from '../../hooks/useConfig';
 import { useGlobalIcon } from '../../hooks/useGlobalIcon';
 import { useTNodeDefault } from '../../hooks';
+import useTreeDataExpand from './useTreeDataExpand';
 
 export default function useTreeData(props: TdEnhancedTableProps, context: SetupContext) {
   const { data, columns } = toRefs(props);
-  const { t, globalConfig } = useConfig('table');
+  const { t, globalConfig } = useConfig('table', props.locale);
   const { AddRectangleIcon, MinusRectangleIcon } = useGlobalIcon({
     AddRectangleIcon: TdAddRectangleIcon,
     MinusRectangleIcon: TdMinusRectangleIcon,
@@ -38,6 +38,16 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
     rowKey: props.rowKey || 'id',
     childrenKey: props.tree?.childrenKey || 'children',
   }));
+
+  const {
+    tExpandedTreeNode,
+    isDefaultExpandAllExecute,
+    isDefaultExpandedTreeNodesExecute,
+    expandAll,
+    foldAll,
+    updateExpandOnDataChange,
+    onExpandFoldIconClick,
+  } = useTreeDataExpand(props, { store, dataSource, rowDataKeys });
 
   const checkedColumn = computed(() => columns.value.find((col) => col.colKey === 'row-select'));
 
@@ -64,18 +74,14 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
     });
   };
 
-  const uniqueKeys = computed(() => store.value?.getAllUniqueKeys(data.value, rowDataKeys.value)?.join() || '');
-
   watch(
-    [uniqueKeys],
+    [data],
     () => {
-      if (!data.value) return;
-      // 如果没有树形解构，则不需要相关逻辑
-      if (!props.tree) {
+      if (props.tree) {
+        resetData(data.value);
+      } else {
         dataSource.value = data.value;
-        return;
       }
-      resetData(data.value);
     },
     { immediate: true },
   );
@@ -100,12 +106,16 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
   );
 
   function resetData(data: TableRowData[]) {
-    let newVal = cloneDeep(data);
-    store.value.initialTreeStore(newVal, props.columns, rowDataKeys.value);
-    if (props.tree?.defaultExpandAll) {
-      newVal = store.value.expandAll(newVal, rowDataKeys.value);
+    const { columns, expandedTreeNodes, defaultExpandedTreeNodes, tree } = props;
+    store.value.initialTreeStore(data, columns, rowDataKeys.value);
+    const defaultNeedExpand = Boolean(!isDefaultExpandedTreeNodesExecute.value && defaultExpandedTreeNodes?.length);
+    const needExpandAll = Boolean(tree?.defaultExpandAll && !isDefaultExpandAllExecute.value);
+    if ((tExpandedTreeNode.value?.length && !!(expandedTreeNodes || defaultNeedExpand)) || needExpandAll) {
+      updateExpandOnDataChange(data);
+      isDefaultExpandedTreeNodesExecute.value = true;
+    } else {
+      dataSource.value = [...data];
     }
-    dataSource.value = newVal;
   }
 
   function getTreeNodeStyle(level: number) {
@@ -121,8 +131,8 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
    */
   function toggleExpandData(p: { row: TableRowData; rowIndex: number }, trigger?: 'expand-fold-icon' | 'row-click') {
     const currentData = { ...p };
-    if (p.row.__VIRTUAL_SCROLL_INDEX !== undefined) {
-      currentData.rowIndex = p.row.__VIRTUAL_SCROLL_INDEX;
+    if (p.row.VIRTUAL_SCROLL_INDEX !== undefined) {
+      currentData.rowIndex = p.row.VIRTUAL_SCROLL_INDEX;
     }
     dataSource.value = [...store.value.toggleExpandData(currentData, dataSource.value, rowDataKeys.value)];
     const rowValue = get(p.row, rowDataKeys.value.rowKey);
@@ -169,7 +179,7 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
               <span
                 class={tableTreeClasses.icon}
                 onClick={(e: MouseEvent) => {
-                  toggleExpandData(p, 'expand-fold-icon');
+                  onExpandFoldIconClick(p, 'expand-fold-icon');
                   e.stopPropagation();
                 }}
               >
@@ -225,6 +235,14 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
   }
 
   /**
+   * 移除子节点
+   * @param key 行唯一标识
+   */
+  function removeChildren(key: TableRowValue) {
+    dataSource.value = [...store.value.removeChildren(key, dataSource.value, rowDataKeys.value)];
+  }
+
+  /**
    * 对外暴露的组件实例方法，为当前节点添加子节点，默认添加到最后一个节点
    * @param key 当前节点唯一标识，值为空，则表示给根节点添加元素
    * @param newData 待添加的新节点
@@ -250,20 +268,6 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
    */
   function insertBefore<T>(rowValue: TableRowValue, newData: T) {
     dataSource.value = [...store.value.insertBefore(rowValue, newData, dataSource.value, rowDataKeys.value)];
-  }
-
-  /**
-   * 对外暴露的组件实例方法，展开所有节点
-   */
-  function expandAll() {
-    dataSource.value = [...store.value.expandAll(dataSource.value, rowDataKeys.value)];
-  }
-
-  /**
-   * 对外暴露的组件实例方法，收起所有节点
-   */
-  function foldAll() {
-    dataSource.value = [...store.value.foldAll(dataSource.value, rowDataKeys.value)];
   }
 
   /**
@@ -305,6 +309,7 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
     setData,
     getData,
     remove,
+    removeChildren,
     appendTo,
     insertAfter,
     insertBefore,
@@ -315,5 +320,6 @@ export default function useTreeData(props: TdEnhancedTableProps, context: SetupC
     getTreeNode,
     resetData,
     getTreeExpandedRow,
+    onExpandFoldIconClick,
   };
 }

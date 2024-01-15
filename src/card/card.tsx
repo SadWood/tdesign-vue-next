@@ -5,6 +5,7 @@ import { useTNodeJSX } from '../hooks/tnode';
 import TLoading from '../loading';
 import props from './props';
 import isString from 'lodash/isString';
+import { TdCardProps } from './type';
 
 export default defineComponent({
   name: 'TCard',
@@ -83,8 +84,8 @@ export default defineComponent({
           <div class={headerWrapperCls.value}>
             {showAvatar.value && <div class={headerAvatarCls.value}>{renderTNodeJSX('avatar')}</div>}
             <div>
-              {showTitle.value && <span class={headerTitleCls.value}>{renderTNodeJSX('title')}</span>}
-              {showSubtitle.value && <span class={headerSubTitleCls.value}>{renderTNodeJSX('subtitle')}</span>}
+              {showTitle.value && <div class={headerTitleCls.value}>{renderTNodeJSX('title')}</div>}
+              {showSubtitle.value && <div class={headerSubTitleCls.value}>{renderTNodeJSX('subtitle')}</div>}
               {showDescription.value && <p class={headerDescriptionCls.value}>{renderTNodeJSX('description')}</p>}
             </div>
           </div>
@@ -118,7 +119,11 @@ export default defineComponent({
       );
 
       if (showLoading.value) {
-        return renderTNodeJSX('loading') || <TLoading>{content}</TLoading>;
+        return (
+          renderTNodeJSX('loading') || (
+            <TLoading {...(props.loadingProps as TdCardProps['loadingProps'])}>{content}</TLoading>
+          )
+        );
       }
       return content;
     };

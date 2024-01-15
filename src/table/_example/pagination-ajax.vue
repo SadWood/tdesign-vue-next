@@ -8,13 +8,14 @@
     :selected-row-keys="selectedRowKeys"
     bordered
     stripe
+    lazy-load
     @change="rehandleChange"
     @page-change="onPageChange"
     @select-change="onSelectChange"
   />
 </template>
 <script setup lang="jsx">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ErrorCircleFilledIcon, CheckCircleFilledIcon, CloseCircleFilledIcon } from 'tdesign-icons-vue-next';
 
 const statusNameListMap = {
@@ -24,12 +25,14 @@ const statusNameListMap = {
 };
 const columns = [
   {
+    colKey: 'serial-number',
+  },
+  {
     colKey: 'row-select',
     type: 'multiple',
     width: 46,
   },
   {
-    width: 200,
     colKey: 'name',
     title: '姓名',
     render(h, { type, row: { name } }) {
@@ -40,7 +43,6 @@ const columns = [
   {
     colKey: 'status',
     title: '申请状态',
-    width: '150',
     cell: (h, { _row, rowIndex }) => {
       const status = rowIndex % 3;
       return (
@@ -52,7 +54,6 @@ const columns = [
     },
   },
   {
-    width: 200,
     colKey: 'phone',
     title: '联系方式',
     render(h, { row: { phone } }) {
@@ -62,7 +63,6 @@ const columns = [
   {
     colKey: 'email',
     title: '邮箱',
-    width: 180,
     ellipsis: true,
   },
 ];
@@ -71,14 +71,10 @@ const data = ref([]);
 const isLoading = ref(false);
 const selectedRowKeys = ref([]);
 
-const pagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  showJumper: true,
-  onChange: (pageInfo) => {
-    console.log('pagination.onChange', pageInfo);
-  },
+const pagination = ref({
+  defaultPageSize: 20,
+  total: 100,
+  defaultCurrent: 1,
 });
 
 const fetchData = async (paginationInfo) => {
@@ -90,7 +86,7 @@ const fetchData = async (paginationInfo) => {
     const { results } = await response.json();
     data.value = results;
     // 数据加载完成，设置数据总条数
-    pagination.total = 120;
+    pagination.value.total = 120;
   } catch (err) {
     console.log(err);
     data.value = [];
@@ -106,15 +102,15 @@ const rehandleChange = (changeParams, triggerAndData) => {
 // BaseTable 中只有 page-change 事件，没有 change 事件
 const onPageChange = async (pageInfo) => {
   console.log('page-change', pageInfo);
-  pagination.current = pageInfo.current;
-  pagination.pageSize = pageInfo.pageSize;
+  // pagination.current = pageInfo.current;
+  // pagination.pageSize = pageInfo.pageSize;
   await fetchData(pageInfo);
 };
 
 onMounted(async () => {
   await fetchData({
-    current: pagination.current || pagination.defaultCurrent,
-    pageSize: pagination.pageSize || pagination.defaultPageSize,
+    current: pagination.value.current || pagination.value.defaultCurrent,
+    pageSize: pagination.value.pageSize || pagination.value.defaultPageSize,
   });
 });
 

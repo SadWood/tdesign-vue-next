@@ -12,8 +12,10 @@ import { useConfig } from '../hooks/useConfig';
 import { useGlobalIcon } from '../hooks/useGlobalIcon';
 import { AttachNode } from '../common';
 import isFunction from 'lodash/isFunction';
+import { TableConfig } from '../config-provider';
 
 export interface TableFilterControllerProps {
+  locale: TableConfig;
   tFilterValue: FilterValue;
   innerFilterValue: FilterValue;
   tableFilterClasses: {
@@ -41,6 +43,7 @@ export default defineComponent({
   name: 'TableFilterController',
 
   props: {
+    locale: Object as PropType<TableFilterControllerProps['locale']>,
     column: Object as PropType<TableFilterControllerProps['column']>,
     colIndex: Number,
     tFilterValue: Object as PropType<TableFilterControllerProps['tFilterValue']>,
@@ -59,7 +62,7 @@ export default defineComponent({
   setup(props: TableFilterControllerProps, context) {
     const triggerElementRef = ref<HTMLDivElement>(null);
     const renderTNode = useTNodeDefault();
-    const { t, globalConfig } = useConfig('table');
+    const { t, globalConfig } = useConfig('table', props.locale);
     const { FilterIcon } = useGlobalIcon({ FilterIcon: TdFilterIcon });
     const filterPopupVisible = ref(false);
 
@@ -79,7 +82,15 @@ export default defineComponent({
           });
         });
       }
-      return <component value={props.innerFilterValue?.[column.colKey]} {...filterComponentProps}></component>;
+      const filter = column.filter || {};
+      return (
+        <component
+          class={filter.classNames}
+          style={filter.style}
+          {...filter.attrs}
+          {...filterComponentProps}
+        ></component>
+      );
     };
 
     const getFilterContent = (column: PrimaryTableCol) => {
@@ -88,6 +99,7 @@ export default defineComponent({
         console.error(`TDesign Table Error: column.filter.type must be the following: ${JSON.stringify(types)}`);
         return;
       }
+      const { innerFilterValue = {} } = props;
       const component =
         {
           single: RadioGroup,
@@ -98,17 +110,23 @@ export default defineComponent({
       const filterComponentProps: { [key: string]: any } = {
         options: ['single', 'multiple'].includes(column.filter.type) ? column.filter?.list : undefined,
         ...(column.filter?.props || {}),
-        value: props.innerFilterValue?.[column.colKey],
         onChange: (val: any, ctx: any) => {
           context.emit('inner-filter-change', val, column);
           if (column.filter.props?.onChange) {
             column.filter.props.onChange?.(val, ctx);
           }
+          if (column.filter?.confirmEvents?.includes('onChange')) {
+            filterPopupVisible.value = false;
+          }
         },
       };
+      if (column.colKey && innerFilterValue && column.colKey in innerFilterValue) {
+        filterComponentProps.value = innerFilterValue?.[column.colKey];
+      }
       // 允许自定义触发确认搜索的事件
       if (column.filter.confirmEvents) {
         column.filter.confirmEvents.forEach((event) => {
+          if (event === 'onChange') return;
           filterComponentProps[event] = () => {
             context.emit('confirm', column);
             filterPopupVisible.value = false;
@@ -176,7 +194,8 @@ export default defineComponent({
     const defaultFilterIcon = this.t(this.globalConfig.filterIcon) || <FilterIcon />;
     const filterValue = this.tFilterValue?.[column.colKey];
     const isObjectTrue = typeof filterValue === 'object' && !isEmpty(filterValue);
-    const isValueTrue = filterValue && typeof filterValue !== 'object';
+    // false is a valid filter value
+    const isValueExist = ![null, undefined, ''].includes(filterValue) && typeof filterValue !== 'object';
     return (
       <Popup
         attach={this.attach || (this.primaryTableElement ? () => this.primaryTableElement as HTMLElement : undefined)}
@@ -190,7 +209,7 @@ export default defineComponent({
         class={[
           this.tableFilterClasses.icon,
           {
-            [this.isFocusClass]: isObjectTrue || isValueTrue,
+            [this.isFocusClass]: isObjectTrue || isValueExist,
           },
         ]}
         content={this.getContent}

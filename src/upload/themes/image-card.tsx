@@ -7,7 +7,7 @@ import {
 } from 'tdesign-icons-vue-next';
 import Loading from '../../loading';
 import useGlobalIcon from '../../hooks/useGlobalIcon';
-import ImageViewer from '../../image-viewer';
+import ImageViewer, { ImageViewerProps } from '../../image-viewer';
 import { CommonDisplayFileProps } from '../interface';
 import { commonProps } from '../constants';
 import { TdUploadProps, UploadFile } from '../type';
@@ -15,6 +15,7 @@ import { abridgeName } from '../../_common/js/upload/utils';
 import { UploadConfig } from '../../config-provider';
 import { useTNodeJSX } from '../../hooks';
 import Link from '../../link';
+import Image from '../../image';
 
 export interface ImageCardUploadProps extends CommonDisplayFileProps {
   multiple: TdUploadProps['multiple'];
@@ -40,6 +41,7 @@ export default defineComponent({
     uploadFiles: Function as PropType<ImageCardUploadProps['uploadFiles']>,
     cancelUpload: Function as PropType<ImageCardUploadProps['cancelUpload']>,
     onPreview: Function as PropType<ImageCardUploadProps['onPreview']>,
+    showImageFileName: Boolean,
   },
 
   setup(props) {
@@ -64,11 +66,11 @@ export default defineComponent({
     const renderMainContent = (file: UploadFile, index: number) => {
       return (
         <div class={`${classPrefix.value}-upload__card-content ${classPrefix.value}-upload__card-box`}>
-          <img class={`${classPrefix.value}-upload__card-image`} src={file.url} />
+          <Image class={`${classPrefix.value}-upload__card-image`} src={file.url || file.raw} error="" />
           <div class={`${classPrefix.value}-upload__card-mask`}>
             <span class={`${classPrefix.value}-upload__card-mask-item`} onClick={(e) => e.stopPropagation()}>
               <ImageViewer
-                images={displayFiles.value.map((t: UploadFile) => t.url)}
+                images={displayFiles.value.map((t: UploadFile) => t.url || t.raw)}
                 defaultIndex={index}
                 trigger={(h, { open }) => {
                   return (
@@ -80,6 +82,7 @@ export default defineComponent({
                     />
                   );
                 }}
+                {...(props.imageViewerProps as ImageViewerProps)}
               ></ImageViewer>
             </span>
             {!props.disabled && (
@@ -125,6 +128,14 @@ export default defineComponent({
       // render custom UI with fileListDisplay
       const customList = renderTNodeJSX('fileListDisplay', {
         params: {
+          triggerUpload: props.triggerUpload,
+          uploadFiles: props.uploadFiles,
+          cancelUpload: props.cancelUpload,
+          onPreview: props.onPreview,
+          onRemove: props.onRemove,
+          toUploadFiles: props.toUploadFiles,
+          sizeOverLimitMessage: props.sizeOverLimitMessage,
+          locale: props.locale,
           files: displayFiles.value,
         },
       });
@@ -143,8 +154,8 @@ export default defineComponent({
                 <li class={cardItemClasses} key={index}>
                   {file.status === 'progress' && renderProgressFile(file, loadCard)}
                   {file.status === 'fail' && renderFailFile(file, index, loadCard)}
-                  {!['progress', 'fail'].includes(file.status) && file.url && renderMainContent(file, index)}
-                  {fileName &&
+                  {!['progress', 'fail'].includes(file.status) && renderMainContent(file, index)}
+                  {Boolean(fileName && props.showImageFileName) &&
                     (file.url ? (
                       <Link href={file.url} class={fileNameClassName} target="_blank" hover="color" size="small">
                         {fileName}
@@ -163,10 +174,15 @@ export default defineComponent({
                     `${classPrefix.value}-upload__image-add`,
                     `${classPrefix.value}-upload__card-container`,
                     `${classPrefix.value}-upload__card-box`,
+                    {
+                      [`${classPrefix.value}-is-disabled`]: props.disabled,
+                    },
                   ]}
                 >
                   <AddIcon />
-                  <p class={`${classPrefix.value}-size-s`}>{locale.value?.triggerUploadText?.image}</p>
+                  <p class={[`${classPrefix.value}-size-s`, `${classPrefix.value}-upload__add-text`]}>
+                    {locale.value?.triggerUploadText?.image}
+                  </p>
                 </div>
               </li>
             )}
